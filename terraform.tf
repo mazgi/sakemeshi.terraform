@@ -19,3 +19,9 @@ provider "aws" {
 }
 
 # --------------------------------
+# Route 53 DNS
+
+resource "aws_route53_zone" "sakemeshi-love" {
+  name = "sakemeshi.love"
+}
+
