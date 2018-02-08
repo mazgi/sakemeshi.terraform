@@ -57,17 +57,6 @@ resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": "*",
-      "Action": [
-        "s3:GetObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::sakemeshi-love-website-prod-s3",
-        "arn:aws:s3:::sakemeshi-love-website-prod-s3/*"
-      ]
-    },
-    {
-      "Effect": "Allow",
       "Principal": {
         "AWS": [
           "arn:aws:iam::${var.aws_account_id}:user/sakemeshi-love-website-prod-writer"
