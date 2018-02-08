@@ -17,4 +17,4 @@ fi
 
 export AWS_ACCESS_KEY_ID=$(tail -1 secret/${AWS_ACCOUNT_NAME}.terraform-admin.credentials.csv | cut -d, -f3)
 export AWS_SECRET_ACCESS_KEY=$(tail -1 secret/${AWS_ACCOUNT_NAME}.terraform-admin.credentials.csv | cut -d, -f4)
-echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}"
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID//([[:alpha:]]|[[:digit:]])/*}"
