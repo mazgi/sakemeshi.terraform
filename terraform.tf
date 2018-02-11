@@ -96,8 +96,8 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
     ]
 
     resources = [
-      "arn:aws:s3:::sakemeshi-love-website-prod-s3",
-      "arn:aws:s3:::sakemeshi-love-website-prod-s3/*",
+      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}",
+      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}/*",
     ]
 
     principals {
@@ -113,8 +113,8 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
     actions = ["s3:*"]
 
     resources = [
-      "arn:aws:s3:::sakemeshi-love-website-prod-s3",
-      "arn:aws:s3:::sakemeshi-love-website-prod-s3/*",
+      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}",
+      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}/*",
     ]
 
     principals {
@@ -129,7 +129,6 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
 
 resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
   bucket = "sakemeshi-love-website-prod-s3"
-  policy = "${data.aws_iam_policy_document.sakemeshi-love-website-prod-s3-policy.json}"
 
   website {
     index_document = "index.html"
@@ -139,6 +138,11 @@ resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
   tags {}
 
   force_destroy = true
+}
+
+resource "aws_s3_bucket_policy" "sakemeshi-love-website-prod-s3" {
+  bucket = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.id}"
+  policy = "${data.aws_iam_policy_document.sakemeshi-love-website-prod-s3-policy.json}"
 }
 
 # --------------------------------
