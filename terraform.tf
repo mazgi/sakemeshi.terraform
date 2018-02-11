@@ -129,6 +129,7 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
 
 resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
   bucket = "sakemeshi-love-website-prod-s3"
+  acl    = "public-read"
 
   website {
     index_document = "index.html"
@@ -151,19 +152,22 @@ resource "aws_s3_bucket_policy" "sakemeshi-love-website-prod-s3" {
 resource "aws_cloudfront_origin_access_identity" "sakemeshi-love-website-prod-origin_access_identity" {}
 
 resource "aws_cloudfront_distribution" "sakemeshi-love-website-prod-distribution" {
-  origin {
-    #domain_name = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.website_endpoint}"
-    domain_name = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.bucket_domain_name}"
-    origin_id   = "sakemeshi-love-prod-origin"
-
-    s3_origin_config {
-      origin_access_identity = "${aws_cloudfront_origin_access_identity.sakemeshi-love-website-prod-origin_access_identity.cloudfront_access_identity_path}"
-    }
-  }
-
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
+  price_class         = "PriceClass_200"
+
+  origin {
+    domain_name = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.website_endpoint}"
+    origin_id   = "sakemeshi-love-prod-origin"
+
+    custom_origin_config {
+      http_port              = "80"
+      https_port             = "443"
+      origin_protocol_policy = "match-viewer"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
 
   # ToDo
   #logging_config {
@@ -185,20 +189,19 @@ resource "aws_cloudfront_distribution" "sakemeshi-love-website-prod-distribution
       }
     }
 
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
   }
-  price_class = "PriceClass_200"
   restrictions {
     geo_restriction {
       restriction_type = "none"
     }
   }
-  tags = {}
   viewer_certificate {
     acm_certificate_arn = "${aws_acm_certificate.sakemeshi-love.arn}"
     ssl_support_method  = "sni-only"
   }
+  tags = {}
 }
