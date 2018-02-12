@@ -2,7 +2,7 @@ variable "aws_account_id" {}
 variable "aws_access_key" {}
 variable "aws_secret_key" {}
 
-variable "website_domainname" {
+variable "website_domain_name" {
   default = "sakemeshi.love"
 }
 
