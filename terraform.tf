@@ -21,74 +21,77 @@ provider "aws" {
 }
 
 # --------------------------------
-# IAM User: sakemeshi-love-website-prod-writer
+# IAM User: website-prod-writer
 
-resource "aws_iam_user" "sakemeshi-love-website-prod-writer" {
-  name          = "sakemeshi-love-website-prod-writer"
-  force_destroy = false
+resource "aws_iam_user" "website-prod-writer" {
+  name          = "${var.website_name}-website-prod-writer"
+  force_destroy = true
 }
 
 # --------------------------------
-# Route 53 DNS: sakemeshi.love
+# Route 53 DNS:
 
-resource "aws_route53_zone" "sakemeshi-love" {
-  name = "sakemeshi.love"
+resource "aws_route53_zone" "website-zone" {
+  name = "${var.website_domainname}"
 }
 
-resource "aws_route53_record" "sakemeshi-love" {
-  zone_id = "${aws_route53_zone.sakemeshi-love.zone_id}"
-  name    = "sakemeshi.love"
+output "website-zone-nameservers" {
+  value = "${aws_route53_zone.website-zone.name_servers}"
+}
+
+resource "aws_route53_record" "website-cloudfront" {
+  zone_id = "${aws_route53_zone.website-zone.zone_id}"
+  name    = "${var.website_domainname}"
   type    = "A"
 
   alias {
-    name                   = "${aws_cloudfront_distribution.sakemeshi-love-website-prod-distribution.domain_name}"
-    zone_id                = "${aws_cloudfront_distribution.sakemeshi-love-website-prod-distribution.hosted_zone_id}"
+    name                   = "${aws_cloudfront_distribution.website-prod-distribution.domain_name}"
+    zone_id                = "${aws_cloudfront_distribution.website-prod-distribution.hosted_zone_id}"
     evaluate_target_health = false
   }
 }
 
 # --------------------------------
-# ACM: sakemeshi.love, *.sakemeshi.love
+# ACM:
 # Need AWS provider v1.9 or more.
 # see: https://github.com/terraform-providers/terraform-provider-aws/pull/2813
 
-resource "aws_acm_certificate" "sakemeshi-love" {
-  domain_name               = "sakemeshi.love"
-  subject_alternative_names = ["*.sakemeshi.love"]
+resource "aws_acm_certificate" "website" {
+  domain_name               = "${var.website_domainname}"
+  subject_alternative_names = ["*.${var.website_domainname}"]
   validation_method         = "DNS"
 }
 
-# for 'sakemeshi.love'
-resource "aws_route53_record" "certificate-validation-sakemeshi-love" {
-  name    = "${aws_acm_certificate.sakemeshi-love.domain_validation_options.0.resource_record_name}"
-  type    = "${aws_acm_certificate.sakemeshi-love.domain_validation_options.0.resource_record_type}"
-  zone_id = "${aws_route53_zone.sakemeshi-love.zone_id}"
-  records = ["${aws_acm_certificate.sakemeshi-love.domain_validation_options.0.resource_record_value}"]
+resource "aws_route53_record" "website-certificate-validation" {
+  name    = "${aws_acm_certificate.website.domain_validation_options.0.resource_record_name}"
+  type    = "${aws_acm_certificate.website.domain_validation_options.0.resource_record_type}"
+  zone_id = "${aws_route53_zone.website-zone.zone_id}"
+  records = ["${aws_acm_certificate.website.domain_validation_options.0.resource_record_value}"]
   ttl     = 60
 }
 
-## for '*.sakemeshi.love'
-#resource "aws_route53_record" "certificate-validation-_-sakemeshi-love" {
-#  name = "${aws_acm_certificate.sakemeshi-love.domain_validation_options.1.resource_record_name}"
-#  type = "${aws_acm_certificate.sakemeshi-love.domain_validation_options.1.resource_record_type}"
-#  zone_id = "${aws_route53_zone.sakemeshi-love.zone_id}"
-#  records = ["${aws_acm_certificate.sakemeshi-love.domain_validation_options.1.resource_record_value}"]
-#  ttl = 60
-#}
+# for wildcard
+resource "aws_route53_record" "_-website-certificate-validation" {
+  name    = "${aws_acm_certificate.website.domain_validation_options.1.resource_record_name}"
+  type    = "${aws_acm_certificate.website.domain_validation_options.1.resource_record_type}"
+  zone_id = "${aws_route53_zone.website-zone.zone_id}"
+  records = ["${aws_acm_certificate.website.domain_validation_options.1.resource_record_value}"]
+  ttl     = 60
+}
 
-resource "aws_acm_certificate_validation" "sakemeshi-love" {
-  certificate_arn = "${aws_acm_certificate.sakemeshi-love.arn}"
+resource "aws_acm_certificate_validation" "website" {
+  certificate_arn = "${aws_acm_certificate.website.arn}"
 
   validation_record_fqdns = [
-    "${aws_route53_record.certificate-validation-sakemeshi-love.fqdn}",
-    "${aws_route53_record.certificate-validation-sakemeshi-love.fqdn}",
+    "${aws_route53_record.website-certificate-validation.fqdn}",
+    "${aws_route53_record._-website-certificate-validation.fqdn}",
   ]
 }
 
 # --------------------------------
-# S3 buckets: sakemeshi.love
+# S3 buckets:
 
-data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
+data "aws_iam_policy_document" "website-prod-s3-policy" {
   statement {
     actions = [
       "s3:ListBucket",
@@ -96,15 +99,15 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
     ]
 
     resources = [
-      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}",
-      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}/*",
+      "${aws_s3_bucket.website-prod-s3.arn}",
+      "${aws_s3_bucket.website-prod-s3.arn}/*",
     ]
 
     principals {
       type = "AWS"
 
       identifiers = [
-        "${aws_cloudfront_origin_access_identity.sakemeshi-love-website-prod-origin_access_identity.iam_arn}",
+        "${aws_cloudfront_origin_access_identity.website-prod-origin_access_identity.iam_arn}",
       ]
     }
   }
@@ -113,22 +116,22 @@ data "aws_iam_policy_document" "sakemeshi-love-website-prod-s3-policy" {
     actions = ["s3:*"]
 
     resources = [
-      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}",
-      "${aws_s3_bucket.sakemeshi-love-website-prod-s3.arn}/*",
+      "${aws_s3_bucket.website-prod-s3.arn}",
+      "${aws_s3_bucket.website-prod-s3.arn}/*",
     ]
 
     principals {
       type = "AWS"
 
       identifiers = [
-        "${aws_iam_user.sakemeshi-love-website-prod-writer.arn}",
+        "${aws_iam_user.website-prod-writer.arn}",
       ]
     }
   }
 }
 
-resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
-  bucket = "sakemeshi-love-website-prod-s3"
+resource "aws_s3_bucket" "website-prod-s3" {
+  bucket = "${var.website_name}-website-prod-s3"
   acl    = "public-read"
 
   website {
@@ -141,25 +144,25 @@ resource "aws_s3_bucket" "sakemeshi-love-website-prod-s3" {
   force_destroy = true
 }
 
-resource "aws_s3_bucket_policy" "sakemeshi-love-website-prod-s3" {
-  bucket = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.id}"
-  policy = "${data.aws_iam_policy_document.sakemeshi-love-website-prod-s3-policy.json}"
+resource "aws_s3_bucket_policy" "website-prod-s3" {
+  bucket = "${aws_s3_bucket.website-prod-s3.id}"
+  policy = "${data.aws_iam_policy_document.website-prod-s3-policy.json}"
 }
 
 # --------------------------------
-# CloudFront: sakemeshi.love
+# CloudFront:
 
-resource "aws_cloudfront_origin_access_identity" "sakemeshi-love-website-prod-origin_access_identity" {}
+resource "aws_cloudfront_origin_access_identity" "website-prod-origin_access_identity" {}
 
-resource "aws_cloudfront_distribution" "sakemeshi-love-website-prod-distribution" {
+resource "aws_cloudfront_distribution" "website-prod-distribution" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   price_class         = "PriceClass_200"
 
   origin {
-    domain_name = "${aws_s3_bucket.sakemeshi-love-website-prod-s3.website_endpoint}"
-    origin_id   = "sakemeshi-love-prod-origin"
+    domain_name = "${aws_s3_bucket.website-prod-s3.website_endpoint}"
+    origin_id   = "${var.website_name}-prod-origin"
 
     custom_origin_config {
       http_port              = "80"
@@ -174,12 +177,12 @@ resource "aws_cloudfront_distribution" "sakemeshi-love-website-prod-distribution
   #}
 
   aliases = [
-    "sakemeshi.love",
+    "${var.website_domainname}",
   ]
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "sakemeshi-love-prod-origin"
+    target_origin_id = "${var.website_name}-prod-origin"
 
     forwarded_values {
       query_string = false
@@ -200,7 +203,7 @@ resource "aws_cloudfront_distribution" "sakemeshi-love-website-prod-distribution
     }
   }
   viewer_certificate {
-    acm_certificate_arn = "${aws_acm_certificate.sakemeshi-love.arn}"
+    acm_certificate_arn = "${aws_acm_certificate.website.arn}"
     ssl_support_method  = "sni-only"
   }
   tags = {}
