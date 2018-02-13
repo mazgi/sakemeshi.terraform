@@ -29,6 +29,7 @@ resource "aws_route53_zone" "website-zone" {
 
 module "static-website" {
   source       = "mazgi/static-website/aws"
+  version      = "0.0.2"
   website_name = "${var.website_name}"
 
   website_domain = {
